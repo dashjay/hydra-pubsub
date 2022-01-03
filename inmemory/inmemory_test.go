@@ -26,57 +26,58 @@ func TestInMemory(t *testing.T) {
 
 func TestInMemoryMultiSubscriber(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	inm := New()
-	dj1 := inm.Subscribe(ctx, pubsub.NewSubscriptionOptions(64, "love", "hate"))
-	dj2 := inm.Subscribe(ctx, pubsub.NewSubscriptionOptions(64, "love", "hate"))
-	ch1 := dj1.Chan()
-	ch2 := dj2.Chan()
+	sub1 := inm.Subscribe(ctx, pubsub.NewSubscriptionOptions(64, "love", "hate"))
+	sub2 := inm.Subscribe(ctx, pubsub.NewSubscriptionOptions(64, "love", "hate"))
 	inm.Publish(ctx, "love", 666)
-	m1 := <-ch1
-	t.Logf("dj1 receive message %v", m1.Message())
-	m2 := <-ch2
-	t.Logf("dj2 receive message %v", m2.Message())
-	cancel()
+	m1 := <-sub1.Chan()
+	t.Logf("sub1 receive message %v", m1.Message())
+	m2 := <-sub2.Chan()
+	t.Logf("sub2 receive message %v", m2.Message())
 }
 
 func BenchmarkInMemoryPublishMany(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	inm := New()
-	dj1 := inm.Subscribe(ctx, pubsub.NewSubscriptionOptions(64, "love", "hate"))
-	dj2 := inm.Subscribe(ctx, pubsub.NewSubscriptionOptions(64, "love", "hate"))
+	sub1, sub2 :=
+		inm.Subscribe(ctx, pubsub.NewSubscriptionOptions(64, "love", "hate")),
+		inm.Subscribe(ctx, pubsub.NewSubscriptionOptions(64, "love", "hate"))
 
 	done := make(chan struct{})
 	go func() {
-		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			inm.Publish(ctx, "love", 666)
 		}
 		done <- struct{}{}
-		b.StopTimer()
-		b.Logf("stop timer")
 	}()
 
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		for range dj1.Chan() {
+		ch := sub1.Chan()
+		for i := 0; i < b.N; i++ {
+			<-ch
 		}
+		sub1.Close()
 	}()
 	go func() {
 		defer wg.Done()
-		for range dj2.Chan() {
+		ch := sub2.Chan()
+		for i := 0; i < b.N; i++ {
+			<-ch
 		}
+		sub2.Close()
 	}()
-
 	<-done
-	cancel()
 	wg.Wait()
-	b.Logf("canceled")
 }
 
 func BenchmarkInMemorySubscriptionMany(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	inm := New()
 	opt := pubsub.NewSubscriptionOptions(64, "love", "hate")
 
@@ -88,5 +89,4 @@ func BenchmarkInMemorySubscriptionMany(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		<-subscriptions[i].Chan()
 	}
-	cancel()
 }
