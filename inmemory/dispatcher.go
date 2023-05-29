@@ -29,7 +29,7 @@ func (d *Dispatcher) Add(ch chan<- pubsub.Message) {
 func (d *Dispatcher) Remove(ch chan pubsub.Message) {
 	d.Lock()
 	defer d.Unlock()
-	nch := make([]chan<- pubsub.Message, len(d.channels) - 1)
+	nch := make([]chan<- pubsub.Message, len(d.channels)-1)
 	for i := 0; i < len(d.channels); i++ {
 		if ch != d.channels[i] {
 			nch = append(nch, d.channels[i])

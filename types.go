@@ -10,7 +10,7 @@ type Pubsub interface {
 	Publish(ctx context.Context, topic string, message interface{})
 
 	// Subscribe input a topic and get a handle(Subscription) to receive message
-	Subscribe(ctx context.Context, option *SubscriptionOptions) Subscription
+	Subscribe(ctx context.Context, option SubscriptionOptions) Subscription
 }
 
 // Subscription is return by Subscribe, like a handle to receive the message or close it.

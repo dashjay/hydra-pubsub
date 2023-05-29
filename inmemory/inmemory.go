@@ -62,14 +62,15 @@ func (i *inMemory) watch(ctx context.Context, topics []string, sub *subscription
 	<-ctx.Done()
 }
 
-func (i *inMemory) Subscribe(ctx context.Context, option *pubsub.SubscriptionOptions) pubsub.Subscription {
-	if option.BufferSize < 0 {
-		option.BufferSize = 0
+func (i *inMemory) Subscribe(ctx context.Context, option pubsub.SubscriptionOptions) pubsub.Subscription {
+	buf := option.GetBufferSize()
+	if buf < 0 {
+		buf = 0
 	}
-	ch := make(chan pubsub.Message, option.BufferSize)
+	ch := make(chan pubsub.Message, buf)
 	ready := make(chan struct{})
 	subCtx, sub := newSubscription(ctx, ch)
-	go i.watch(subCtx, option.Topics, sub, ready)
+	go i.watch(subCtx, option.GetAllTopics(), sub, ready)
 	<-ready
 	return sub
 }
